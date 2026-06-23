@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Secrets & credential caches — NEVER commit
+.env
+.env.local
+*.credentials.json
+.dcr-credentials.json
+credentials/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+.idea/
+*.swp
