@@ -65,8 +65,7 @@ export function parseMetadata(raw: RawMetadata, config: AppConfig): AsMetadata {
 }
 
 const WELL_KNOWN_PATHS = [
-  "/.well-known/openid-configuration",
-  "/.well-known/oauth-authorization-server",
+  "/f5-oauth2/v1/.well-known/openid-configuration",
 ];
 
 /**
