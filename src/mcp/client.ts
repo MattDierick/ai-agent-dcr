@@ -36,9 +36,14 @@ export async function connectMcp(serverUrl: string, accessToken: string): Promis
     requestInit: {
       headers: {
         Authorization: `Bearer ${accessToken}`,
+        // The MCP Streamable HTTP transport requires the client to accept BOTH
+        // JSON and SSE responses. Some FastMCP servers return 406 Not Acceptable
+        // if this is missing, which would break the automatic tools/call flow.
+        Accept: "application/json, text/event-stream",
       },
     },
   });
+
 
   const client = new Client(
     { name: "dcr-mcp-agent", version: "1.0.0" },
