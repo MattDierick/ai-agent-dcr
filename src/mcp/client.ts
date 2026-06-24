@@ -45,22 +45,38 @@ export async function connectMcp(serverUrl: string, accessToken: string): Promis
   });
 
 
-  const client = new Client(
-    { name: "dcr-mcp-agent", version: "1.0.0" },
-    { capabilities: {} },
-  );
+  const clientInfo = { name: "dcr-mcp-agent", version: "1.0.0" };
+  const client = new Client(clientInfo, { capabilities: {} });
+
+  // The JSON-RPC "initialize" body the SDK sends during client.connect().
+  // Logged so the exact MCP init payload is visible in the npm logs.
+  const initBody = {
+    jsonrpc: "2.0",
+    method: "initialize",
+    params: {
+      protocolVersion: "2024-11-05",
+      capabilities: {},
+      clientInfo,
+    },
+    id: 1,
+  };
 
   try {
-    logger.info("Connecting to MCP server", { serverUrl });
+    logger.info("MCP init: sending initialize request", {
+      serverUrl,
+      body: JSON.stringify(initBody),
+    });
     await client.connect(transport);
-    logger.info("MCP session initialized");
+    logger.info("MCP init: SUCCESS — session initialized", { serverUrl });
   } catch (err) {
     const message = (err as Error).message ?? String(err);
+    logger.error("MCP init: FAILED", { serverUrl, error: message });
     if (/401|unauthorized/i.test(message)) {
       throw new McpUnauthorizedError(`MCP server returned 401: ${message}`);
     }
     throw err;
   }
+
 
   return {
     client,

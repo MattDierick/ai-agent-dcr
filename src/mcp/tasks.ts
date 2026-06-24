@@ -32,15 +32,37 @@ export async function callTool(
   toolName: string,
   args: Record<string, unknown>,
 ): Promise<ToolCallResult> {
-  logger.info("Calling MCP tool", { toolName, args });
-  const res = await client.callTool({ name: toolName, arguments: args });
+  // The JSON-RPC "tools/call" body the SDK sends. Logged so the exact MCP
+  // request payload is visible in the npm logs.
+  const requestBody = {
+    jsonrpc: "2.0",
+    method: "tools/call",
+    params: { name: toolName, arguments: args },
+    id: 2,
+  };
+  logger.info("MCP request: sending tools/call", {
+    toolName,
+    body: JSON.stringify(requestBody),
+  });
+
+  let res;
+  try {
+    res = await client.callTool({ name: toolName, arguments: args });
+  } catch (err) {
+    logger.error("MCP request: FAILED", {
+      toolName,
+      error: (err as Error).message ?? String(err),
+    });
+    throw err;
+  }
 
   const isError = Boolean((res as { isError?: boolean }).isError);
   if (isError) {
-    logger.warn("MCP tool reported an error", { toolName });
+    logger.warn("MCP request: tool reported an error result", { toolName });
   } else {
-    logger.info("MCP tool call succeeded", { toolName });
+    logger.info("MCP request: SUCCESS — tools/call completed", { toolName });
   }
+
 
   return {
     toolName,
