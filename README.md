@@ -45,6 +45,39 @@ Optional: `DCR_SCOPE` (default `scope-dcr`), `OAUTH_REGISTRATION_ENDPOINT`,
 `MCP_TOOL_NAME`, `MCP_TOOL_ARGS`, `CLIENT_CREDENTIALS_PATH`, `LOG_LEVEL`.
 
 
+## Tool configuration
+
+Override the default `add(9,7)` demo with `MCP_TOOL_NAME` and `MCP_TOOL_ARGS`.
+`MCP_TOOL_ARGS` must be a **JSON object** (keys double-quoted, values unquoted for numbers):
+
+```bash
+# Inline for a single run (single-quote the JSON so the shell doesn't expand it)
+MCP_TOOL_NAME=add MCP_TOOL_ARGS='{"a":9,"b":7}' npm start
+
+# Or export for the whole session
+export MCP_TOOL_NAME=add
+export MCP_TOOL_ARGS='{"a":9,"b":7}'
+npm start
+
+# Or set in .env (no quotes needed)
+# MCP_TOOL_NAME=add
+# MCP_TOOL_ARGS={"a":9,"b":7}
+```
+
+More examples:
+
+```bash
+# A tool with string + number args
+MCP_TOOL_NAME=greet MCP_TOOL_ARGS='{"name":"Alice","times":3}' npm start
+
+# A tool with no arguments
+MCP_TOOL_NAME=ping MCP_TOOL_ARGS='{}' npm start
+```
+
+The exact JSON-RPC body for both the `initialize` handshake and the `tools/call`
+request is printed in the logs (look for `MCP init: sending initialize request`
+and `MCP request: sending tools/call`), so you can confirm exactly what was sent.
+
 ## Usage
 
 ```bash
@@ -56,6 +89,7 @@ export MCP_SERVER_URL="https://your-mcp.example.com/mcp"
 
 npm start
 ```
+
 
 ## Development
 
