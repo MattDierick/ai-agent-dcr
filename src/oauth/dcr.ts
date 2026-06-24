@@ -88,6 +88,7 @@ export function buildClientMetadata(config: AppConfig): Record<string, unknown> 
     client_name: "dcr-mcp-agent",
     grant_types: ["client_credentials", "authorization_code", "implicit", "refresh_token"],
     response_types: ["token", "code"],
+    redirect_uris: ["https://oauth.pstmn.io/v1/callback"],
     scope: config.dcrScope,
     token_endpoint_auth_method: "client_secret_post",
   };
