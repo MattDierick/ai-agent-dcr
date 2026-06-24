@@ -9,7 +9,12 @@
  * MCP_TOOL_ARGS environment variables.
  */
 
+// Must be imported first: disables TLS verification for ALL HTTPS requests
+// (AS and MCP servers use unsigned certificates). See the module for details.
+import "./util/insecureTls.js";
+
 import { loadConfig, ConfigError } from "./config/index.js";
+
 import { Agent } from "./agent/agent.js";
 import { logger } from "./util/logger.js";
 

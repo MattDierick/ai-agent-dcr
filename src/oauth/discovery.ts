@@ -6,29 +6,17 @@
  * configured overrides take precedence when discovery is unavailable.
  */
 
-import { Agent } from "undici";
 import { logger } from "../util/logger.js";
 import type { AppConfig } from "../config/index.js";
 
-/**
- * Dispatcher that disables TLS certificate verification.
- *
- * The OAuth Authorization Server presents a certificate that is not signed by
- * a trusted CA (e.g. a self-signed cert), so the default `fetch` TLS check
- * would fail. This dispatcher bypasses that check for discovery requests only,
- * rather than disabling TLS verification process-wide.
- *
- * WARNING: Bypassing TLS verification is insecure and should only be used
- * against trusted endpoints in controlled environments.
- */
-const insecureTlsDispatcher = new Agent({
-  connect: { rejectUnauthorized: false },
-});
-
+// NOTE: TLS certificate verification is disabled globally for all HTTPS
+// requests in `src/util/insecureTls.ts` (imported at startup), because the AS
+// uses an unsigned certificate. No per-request dispatcher is needed here.
 
 export interface AsMetadata {
   issuer: string;
   registrationEndpoint: string;
+
   tokenEndpoint: string;
   jwksUri?: string;
   grantTypesSupported?: string[];
@@ -102,16 +90,11 @@ export async function discoverMetadata(
       const res = await fetchImpl(url, {
         method: "GET",
         headers: { Accept: "application/json" },
-        // `dispatcher` is an undici-specific extension to RequestInit; it lets
-        // us bypass TLS verification for this request only. Cast through
-        // `unknown` because the DOM RequestInit type does not include it and
-        // the bundled undici types differ from the installed undici package.
-        dispatcher: insecureTlsDispatcher,
-      } as unknown as RequestInit);
-
+      });
 
       if (!res.ok) {
         lastError = new DiscoveryError(`Metadata request failed: ${res.status} ${res.statusText}`);
+
         continue;
       }
       const raw = (await res.json()) as RawMetadata;
