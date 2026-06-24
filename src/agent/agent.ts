@@ -61,8 +61,15 @@ export class Agent {
     }
 
     const metadata = await this.ensureMetadata();
-    const creds = await registerClient(metadata.registrationEndpoint, this.config);
+    // Two-step DCR: Step 1 mints an IAT at the token endpoint, Step 2 registers
+    // the client at the registration endpoint using that IAT as a Bearer token.
+    const creds = await registerClient(
+      metadata.registrationEndpoint,
+      metadata.tokenEndpoint,
+      this.config,
+    );
     await saveCredentials(this.config.clientCredentialsPath, creds);
+
     return creds;
   }
 

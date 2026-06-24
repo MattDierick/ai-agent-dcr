@@ -93,46 +93,89 @@ describe("dcr", () => {
     expect(creds.clientSecret).toBe("shh");
   });
 
-  it("registers with IAT Basic auth and form body", async () => {
-    let capturedAuth = "";
-    let capturedBody = "";
-    let capturedContentType = "";
-    const fetchImpl = (async (_url: string, init: RequestInit) => {
+  it("performs the two-step DCR flow (IAT then register)", async () => {
+    interface Captured {
+      url: string;
+      auth: string;
+      contentType: string;
+      body: string;
+    }
+    const calls: Captured[] = [];
+
+    const fetchImpl = (async (url: string, init: RequestInit) => {
       const headers = init.headers as Record<string, string>;
-      capturedAuth = headers.Authorization ?? "";
-      capturedContentType = headers["Content-Type"] ?? "";
-      capturedBody = String(init.body);
-      return fakeResponse({ client_id: "id1", client_secret: "sec1" });
+      calls.push({
+        url,
+        auth: headers.Authorization ?? "",
+        contentType: headers["Content-Type"] ?? "",
+        body: String(init.body),
+      });
+      // Step 1: token endpoint returns the IAT.
+      if (url.endsWith("/token")) {
+        return fakeResponse({ access_token: "iat-token", token_type: "Bearer", expires_in: 300 });
+      }
+      // Step 2: register endpoint returns the client credentials.
+      return fakeResponse({ client_id: "id1", client_secret: "sec1", client_secret_expires_at: 0 });
     }) as unknown as typeof fetch;
 
-    const creds = await registerClient("https://as.example.com/register", baseConfig, fetchImpl);
+    const creds = await registerClient(
+      "https://as.example.com/register",
+      "https://as.example.com/token",
+      baseConfig,
+      fetchImpl,
+    );
     expect(creds.clientId).toBe("id1");
+    expect(creds.clientSecret).toBe("sec1");
+    expect(calls).toHaveLength(2);
 
-    // Basic auth uses the IAT client id/secret.
+    // Step 1: Basic auth with IAT client id/secret + form body.
+    const step1 = calls[0]!;
+    expect(step1.url).toBe("https://as.example.com/token");
     const expectedBasic = "Basic " + Buffer.from("iat-id:iat-secret").toString("base64");
-    expect(capturedAuth).toBe(expectedBasic);
-    expect(capturedContentType).toBe("application/x-www-form-urlencoded");
-
-    // Body is form-encoded with grant_type + scope only.
-    const params = new URLSearchParams(capturedBody);
+    expect(step1.auth).toBe(expectedBasic);
+    expect(step1.contentType).toBe("application/x-www-form-urlencoded");
+    const params = new URLSearchParams(step1.body);
     expect(params.get("grant_type")).toBe("client_credentials");
     expect(params.get("scope")).toBe("scope-dcr");
+
+    // Step 2: Bearer IAT + JSON body.
+    const step2 = calls[1]!;
+    expect(step2.url).toBe("https://as.example.com/register");
+    expect(step2.auth).toBe("Bearer iat-token");
+    expect(step2.contentType).toBe("application/json");
+    const jsonBody = JSON.parse(step2.body) as Record<string, unknown>;
+    expect(jsonBody.scope).toBe("scope-dcr");
   });
 
   it("throws when IAT credentials are missing", async () => {
     const fetchImpl = (async () => fakeResponse({})) as unknown as typeof fetch;
     const cfg = { ...baseConfig, dcrClientId: undefined, dcrClientSecret: undefined };
-    await expect(registerClient("https://as.example.com/register", cfg, fetchImpl)).rejects.toBeInstanceOf(DcrError);
+    await expect(
+      registerClient("https://as.example.com/register", "https://as.example.com/token", cfg, fetchImpl),
+    ).rejects.toBeInstanceOf(DcrError);
   });
 
-  it("surfaces DCR 4xx errors", async () => {
+  it("surfaces a Step 1 (IAT) error", async () => {
     const fetchImpl = (async () =>
       fakeResponse({ error: "invalid_client", error_description: "bad iat" }, false, 401)) as unknown as typeof fetch;
-    await expect(registerClient("https://as.example.com/register", baseConfig, fetchImpl)).rejects.toBeInstanceOf(
-      DcrError,
-    );
+    await expect(
+      registerClient("https://as.example.com/register", "https://as.example.com/token", baseConfig, fetchImpl),
+    ).rejects.toBeInstanceOf(DcrError);
+  });
+
+  it("surfaces a Step 2 (register) error", async () => {
+    const fetchImpl = (async (url: string) => {
+      if (url.endsWith("/token")) {
+        return fakeResponse({ access_token: "iat-token", expires_in: 300 });
+      }
+      return fakeResponse({ error: "invalid_client_metadata" }, false, 400);
+    }) as unknown as typeof fetch;
+    await expect(
+      registerClient("https://as.example.com/register", "https://as.example.com/token", baseConfig, fetchImpl),
+    ).rejects.toBeInstanceOf(DcrError);
   });
 });
+
 
 
 describe("token helpers", () => {
