@@ -179,11 +179,15 @@ describe("dcr", () => {
 
 
 describe("token helpers", () => {
-  it("selects basic by default", () => {
-    expect(selectAuthMethod()).toBe("client_secret_basic");
+  it("selects client_secret_post by default (F5 requirement)", () => {
+    expect(selectAuthMethod()).toBe("client_secret_post");
     expect(selectAuthMethod(["client_secret_post"])).toBe("client_secret_post");
-    expect(selectAuthMethod(["client_secret_basic", "client_secret_post"])).toBe("client_secret_basic");
+    // Prefer post even when both are advertised.
+    expect(selectAuthMethod(["client_secret_basic", "client_secret_post"])).toBe("client_secret_post");
+    // Honor basic if it is the only advertised method.
+    expect(selectAuthMethod(["client_secret_basic"])).toBe("client_secret_basic");
   });
+
 
   it("decodes jwt exp", () => {
     const header = Buffer.from(JSON.stringify({ alg: "none" })).toString("base64url");
@@ -221,6 +225,32 @@ describe("requestToken", () => {
     expect(capturedAuth.startsWith("Basic ")).toBe(true);
   });
 
+  it("uses client_secret_post by default: credentials in body + token_content_type=jwt", async () => {
+    let capturedAuth: string | undefined;
+    let capturedBody = "";
+    const fetchImpl = (async (_url: string, init: RequestInit) => {
+      capturedAuth = (init.headers as Record<string, string>).Authorization;
+      capturedBody = String(init.body);
+      return fakeResponse({ access_token: "tok", token_type: "Bearer", expires_in: 3600 });
+    }) as unknown as typeof fetch;
+
+    await requestToken(
+      "https://as.example.com/token",
+      { clientId: "cid", clientSecret: "csecret" },
+      { scope: "scope-dcr" },
+      fetchImpl,
+    );
+
+    // No Authorization header for client_secret_post.
+    expect(capturedAuth).toBeUndefined();
+    const params = new URLSearchParams(capturedBody);
+    expect(params.get("grant_type")).toBe("client_credentials");
+    expect(params.get("client_id")).toBe("cid");
+    expect(params.get("client_secret")).toBe("csecret");
+    expect(params.get("scope")).toBe("scope-dcr");
+    expect(params.get("token_content_type")).toBe("jwt");
+  });
+
   it("throws TokenError on invalid_client", async () => {
     const fetchImpl = (async () =>
       fakeResponse({ error: "invalid_client" }, false, 401)) as unknown as typeof fetch;
@@ -229,3 +259,4 @@ describe("requestToken", () => {
     ).rejects.toBeInstanceOf(TokenError);
   });
 });
+

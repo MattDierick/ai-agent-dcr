@@ -62,15 +62,20 @@ export function jwtExp(token: string): number | undefined {
 
 /**
  * Choose the token endpoint auth method based on what the AS supports.
- * Defaults to client_secret_basic unless the AS advertises only post.
+ *
+ * The F5 client is registered with token_endpoint_auth_method=client_secret_post
+ * and the AS rejects Basic auth ("authentication location mismatch"), so we
+ * prefer client_secret_post. If the AS explicitly advertises only
+ * client_secret_basic, we honor that instead.
  */
 export function selectAuthMethod(supported?: string[]): TokenAuthMethod {
   if (supported && supported.length > 0) {
-    if (supported.includes("client_secret_basic")) return "client_secret_basic";
     if (supported.includes("client_secret_post")) return "client_secret_post";
+    if (supported.includes("client_secret_basic")) return "client_secret_basic";
   }
-  return "client_secret_basic";
+  return "client_secret_post";
 }
+
 
 /**
  * Is the cached token still valid (accounting for the safety skew)?
@@ -93,10 +98,15 @@ export async function requestToken(
   options: { scope?: string; authMethod?: TokenAuthMethod },
   fetchImpl: typeof fetch = fetch,
 ): Promise<AccessToken> {
-  const authMethod = options.authMethod ?? "client_secret_basic";
+  // The F5 AS requires client_secret_post (credentials in the body) for the
+  // registered client, so default to that. client_secret_basic is still
+  // supported if explicitly requested.
+  const authMethod = options.authMethod ?? "client_secret_post";
   const params = new URLSearchParams();
   params.set("grant_type", "client_credentials");
   if (options.scope) params.set("scope", options.scope);
+  // F5 expects the issued token to be a JWT.
+  params.set("token_content_type", "jwt");
 
   const headers: Record<string, string> = {
     "Content-Type": "application/x-www-form-urlencoded",
@@ -107,9 +117,11 @@ export async function requestToken(
     const basic = Buffer.from(`${creds.clientId}:${creds.clientSecret ?? ""}`).toString("base64");
     headers.Authorization = `Basic ${basic}`;
   } else {
+    // client_secret_post: client_id and client_secret go in the form body.
     params.set("client_id", creds.clientId);
     if (creds.clientSecret) params.set("client_secret", creds.clientSecret);
   }
+
 
   logger.info("Requesting access token", { tokenEndpoint, authMethod });
   const res = await fetchImpl(tokenEndpoint, {
