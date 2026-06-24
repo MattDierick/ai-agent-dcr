@@ -86,8 +86,8 @@ export function buildBasicAuthHeader(clientId: string, clientSecret: string): st
 export function buildClientMetadata(config: AppConfig): Record<string, unknown> {
   return {
     client_name: "dcr-mcp-agent",
-    grant_types: ["client_credentials"],
-    response_types: ["token"],
+    grant_types: ["client_credentials", "authorization_code", "implicit", "refresh_token"],
+    response_types: ["token", "code"],
     scope: config.dcrScope,
     token_endpoint_auth_method: "client_secret_post",
   };
