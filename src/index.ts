@@ -19,6 +19,13 @@ import { Agent } from "./agent/agent.js";
 import { logger } from "./util/logger.js";
 
 async function main(): Promise<void> {
+  // Allow tool name and args to be passed as positional CLI arguments:
+  //   node --env-file=.env --import tsx src/index.ts <toolName> <argsJSON>
+  // e.g.: node --env-file=.env --import tsx src/index.ts add '{"a":7,"b":11}'
+  const [,, cliToolName, cliToolArgs] = process.argv;
+  if (cliToolName) process.env["MCP_TOOL_NAME"] = cliToolName;
+  if (cliToolArgs) process.env["MCP_TOOL_ARGS"] = cliToolArgs;
+
   let config;
   try {
     config = loadConfig();
