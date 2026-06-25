@@ -19,7 +19,7 @@ export interface AppConfig {
   dcrClientId?: string;
   /** IAT client secret used for HTTP Basic auth on the DCR request (required for DCR). */
   dcrClientSecret?: string;
-  /** Scope sent in the DCR request body. Defaults to "scope-dcr". */
+  /** Scope sent in the DCR request body. Defaults to "scope-client-ai". */
   dcrScope: string;
   /** Space-separated scopes to request (optional). */
   scope?: string;
@@ -130,7 +130,7 @@ export function loadConfig(): AppConfig {
     initialAccessToken: optionalEnv("OAUTH_INITIAL_ACCESS_TOKEN"),
     dcrClientId: optionalEnv("DCR_CLIENT_ID"),
     dcrClientSecret: optionalEnv("DCR_CLIENT_SECRET"),
-    dcrScope: optionalEnv("DCR_SCOPE") ?? "scope-dcr",
+    dcrScope: optionalEnv("DCR_SCOPE") ?? "scope-client-ai",
     scope: optionalEnv("OAUTH_SCOPE"),
 
     mcpServerUrl,

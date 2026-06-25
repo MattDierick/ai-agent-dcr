@@ -16,7 +16,7 @@ const baseConfig: AppConfig = {
   mcpServerUrl: "https://mcp.example.com",
   dcrClientId: "iat-id",
   dcrClientSecret: "iat-secret",
-  dcrScope: "scope-dcr",
+  dcrScope: "scope-",
   mcpToolName: "add",
   mcpToolArgs: { a: 9, b: 7 },
   clientCredentialsPath: ".dcr-credentials.json",
@@ -77,9 +77,9 @@ describe("discovery.discoverMetadata", () => {
 
 describe("dcr", () => {
   it("builds a form body with exactly grant_type and scope", () => {
-    const body = buildRegistrationBody({ ...baseConfig, dcrScope: "scope-dcr" });
+    const body = buildRegistrationBody({ ...baseConfig, dcrScope: "scope-client-ai" });
     expect(body.get("grant_type")).toBe("client_credentials");
-    expect(body.get("scope")).toBe("scope-dcr");
+    expect(body.get("scope")).toBe("scope-client-ai");
     expect([...body.keys()].sort()).toEqual(["grant_type", "scope"]);
   });
 
@@ -136,7 +136,7 @@ describe("dcr", () => {
     expect(step1.contentType).toBe("application/x-www-form-urlencoded");
     const params = new URLSearchParams(step1.body);
     expect(params.get("grant_type")).toBe("client_credentials");
-    expect(params.get("scope")).toBe("scope-dcr");
+    expect(params.get("scope")).toBe("scope-client-ai");
 
     // Step 2: Bearer IAT + JSON body.
     const step2 = calls[1]!;
@@ -144,7 +144,7 @@ describe("dcr", () => {
     expect(step2.auth).toBe("Bearer iat-token");
     expect(step2.contentType).toBe("application/json");
     const jsonBody = JSON.parse(step2.body) as Record<string, unknown>;
-    expect(jsonBody.scope).toBe("scope-dcr");
+    expect(jsonBody.scope).toBe("scope-client-ai");
   });
 
   it("throws when IAT credentials are missing", async () => {
@@ -237,7 +237,7 @@ describe("requestToken", () => {
     await requestToken(
       "https://as.example.com/token",
       { clientId: "cid", clientSecret: "csecret" },
-      { scope: "scope-dcr" },
+      { scope: "scope-client-ai" },
       fetchImpl,
     );
 
@@ -247,7 +247,7 @@ describe("requestToken", () => {
     expect(params.get("grant_type")).toBe("client_credentials");
     expect(params.get("client_id")).toBe("cid");
     expect(params.get("client_secret")).toBe("csecret");
-    expect(params.get("scope")).toBe("scope-dcr");
+    expect(params.get("scope")).toBe("scope-client-ai");
     expect(params.get("token_content_type")).toBe("jwt");
   });
 
