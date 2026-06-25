@@ -64,6 +64,27 @@ npm start
 # MCP_TOOL_ARGS={"a":9,"b":7}
 ```
 
+### Passing tool and args directly on the `node --env-file` command
+
+You can pass the tool name and its arguments as **positional CLI arguments** after
+the script path — no `.env` changes needed. The `.env` file is still used for
+secrets (`OAUTH_AS_ISSUER`, `MCP_SERVER_URL`, etc.), while the tool and its args
+are supplied inline:
+
+```bash
+node --env-file=.env --import tsx src/index.ts add '{"a":7,"b":11}'
+#                                                ^^^  ^^^^^^^^^^^^^
+#                                         tool name   args JSON (single-quoted)
+```
+
+| Position | Example value | Effect |
+|----------|---------------|--------|
+| `argv[2]` | `add` | sets `MCP_TOOL_NAME=add` |
+| `argv[3]` | `'{"a":7,"b":11}'` | sets `MCP_TOOL_ARGS={"a":7,"b":11}` |
+
+CLI arguments take precedence over anything in `.env`. If omitted, the defaults
+(`add` with `{"a":9,"b":7}`) still apply.
+
 More examples:
 
 ```bash
