@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DCR-MCP Agent Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3350;
+      --accent: #4f8ef7;
+      --accent-hover: #6fa3ff;
+      --success: #34d399;
+      --error: #f87171;
+      --warn: #fbbf24;
+      --text: #e2e8f0;
+      --text-muted: #8892a4;
+      --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      --mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      --radius: 8px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Header ──────────────────────────────────── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header .logo {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+    }
+    header .subtitle {
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+    header .pill {
+      margin-left: auto;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 3px 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    header .pill span { color: var(--success); font-weight: 600; }
+
+    /* ── Layout ──────────────────────────────────── */
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 28px 24px;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 24px;
+    }
+
+    /* ── Card ────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title .icon { font-size: 16px; }
+
+    /* ── Start Agent form ────────────────────────── */
+    .form-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .form-group label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    select, input[type="number"], input[type="text"], textarea {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 8px 12px;
+      font-family: var(--font);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    select:focus, input:focus, textarea:focus {
+      border-color: var(--accent);
+    }
+    select { cursor: pointer; min-width: 160px; }
+    input[type="number"] { width: 100px; }
+    textarea {
+      width: 280px;
+      height: 38px;
+      resize: vertical;
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+
+    .btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 9px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .btn:hover:not(:disabled) { background: var(--accent-hover); }
+    .btn:active:not(:disabled) { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .loading-indicator {
+      color: var(--text-muted);
+      font-size: 12px;
+      margin-top: 6px;
+      min-height: 18px;
+    }
+    .loading-indicator.active { color: var(--warn); }
+
+    /* ── Runs table ──────────────────────────────── */
+    .table-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .refresh-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .runs-table-wrap {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    thead th {
+      text-align: left;
+      padding: 8px 12px;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface2); }
+    tbody td {
+      padding: 10px 12px;
+      vertical-align: top;
+    }
+
+    /* ── Status badges ────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .badge.running  { background: rgba(251,191,36,0.15); color: var(--warn); }
+    .badge.succeeded { background: rgba(52,211,153,0.15); color: var(--success); }
+    .badge.failed   { background: rgba(248,113,113,0.15); color: var(--error); }
+    .badge .bdot {
+      width: 6px; height: 6px; border-radius: 50%;
+    }
+    .badge.running .bdot  { background: var(--warn); animation: pulse 1s infinite; }
+    .badge.succeeded .bdot { background: var(--success); }
+    .badge.failed .bdot   { background: var(--error); }
+
+    /* ── Result cell ─────────────────────────────── */
+    .result-cell {
+      font-family: var(--mono);
+      font-size: 12px;
+      max-width: 320px;
+      word-break: break-all;
+    }
+    .result-cell.error { color: var(--error); }
+    .result-cell.pending { color: var(--text-muted); font-style: italic; font-family: var(--font); }
+
+    .args-cell {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .time-cell {
+      color: var(--text-muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    /* ── Empty state ─────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--text-muted);
+    }
+    .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-state p { font-size: 14px; }
+
+    /* ── Tool name chip ───────────────────────────── */
+    .tool-chip {
+      display: inline-block;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 7px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--accent);
+    }
+
+    /* ── Scrollbar ────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">⚡ DCR-MCP</div>
+  <div class="subtitle">Agent Dashboard</div>
+  <div class="pill">Status: <span>online</span></div>
+</header>
+
+<main>
+
+  <!-- ── Start Agent ── -->
+  <div class="card">
+    <div class="card-title"><span class="icon">🚀</span> Start Agent</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>MCP Tool</label>
+        <select id="tool-select">
+          <option value="">Loading tools…</option>
+        </select>
+      </div>
+      <div class="form-group" id="arg-a-group">
+        <label>a</label>
+        <input type="number" id="arg-a" value="9" />
+      </div>
+      <div class="form-group" id="arg-b-group">
+        <label>b</label>
+        <input type="number" id="arg-b" value="7" />
+      </div>
+      <div class="form-group">
+        <label>Extra args (JSON, optional)</label>
+        <textarea id="arg-extra" placeholder='{"key":"value"}'></textarea>
+      </div>
+      <div class="form-group">
+        <label>&nbsp;</label>
+        <button class="btn" id="start-btn" disabled>▶ Start</button>
+      </div>
+    </div>
+    <div class="loading-indicator" id="start-status"></div>
+  </div>
+
+  <!-- ── Runs ── -->
+  <div class="card">
+    <div class="table-header">
+      <div class="card-title" style="margin-bottom:0"><span class="icon">📋</span> Agent Runs</div>
+      <div class="refresh-badge"><div class="dot"></div> Auto-refresh</div>
+    </div>
+    <div class="runs-table-wrap">
+      <table id="runs-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Tool</th>
+            <th>Args</th>
+            <th>Status</th>
+            <th>Started</th>
+            <th>Stopped</th>
+            <th>Result</th>
+          </tr>
+        </thead>
+        <tbody id="runs-body">
+          <tr>
+            <td colspan="7">
+              <div class="empty-state">
+                <div class="icon">🤖</div>
+                <p>No agent runs yet. Start one above!</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  // ── Tool loading ──────────────────────────────────────────────────────────
+  const toolSelect = document.getElementById('tool-select');
+  const startBtn   = document.getElementById('start-btn');
+  const startStatus = document.getElementById('start-status');
+
+  async function loadTools() {
+    try {
+      const res = await fetch('/api/tools');
+      const { tools } = await res.json();
+      toolSelect.innerHTML = '';
+      tools.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t;
+        opt.textContent = t;
+        toolSelect.appendChild(opt);
+      });
+      startBtn.disabled = false;
+      startStatus.textContent = `${tools.length} tool${tools.length !== 1 ? 's' : ''} discovered`;
+      startStatus.classList.remove('active');
+      setTimeout(() => { startStatus.textContent = ''; }, 3000);
+    } catch (e) {
+      toolSelect.innerHTML = '<option value="add">add</option><option value="multiply">multiply</option><option value="divide">divide</option>';
+      startBtn.disabled = false;
+      startStatus.textContent = 'Tool discovery failed — using fallback list';
+    }
+  }
+
+  loadTools();
+
+  // ── Start agent ────────────────────────────────────────────────────────────
+  startBtn.addEventListener('click', async () => {
+    const toolName = toolSelect.value;
+    if (!toolName) return;
+
+    // Build args
+    const args = {};
+    const aVal = document.getElementById('arg-a').value.trim();
+    const bVal = document.getElementById('arg-b').value.trim();
+    if (aVal !== '') args.a = Number(aVal);
+    if (bVal !== '') args.b = Number(bVal);
+
+    const extraRaw = document.getElementById('arg-extra').value.trim();
+    if (extraRaw) {
+      try {
+        const extra = JSON.parse(extraRaw);
+        Object.assign(args, extra);
+      } catch {
+        startStatus.textContent = '⚠ Extra args must be valid JSON';
+        startStatus.classList.add('active');
+        return;
+      }
+    }
+
+    startBtn.disabled = true;
+    startStatus.textContent = `Starting ${toolName}…`;
+    startStatus.classList.add('active');
+
+    try {
+      const res = await fetch('/api/agents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ toolName, args }),
+      });
+      const record = await res.json();
+      startStatus.textContent = `✓ Run ${record.id} started`;
+      startStatus.classList.remove('active');
+    } catch (e) {
+      startStatus.textContent = `✗ Failed to start: ${e.message}`;
+    } finally {
+      startBtn.disabled = false;
+    }
+  });
+
+  // ── Runs table ─────────────────────────────────────────────────────────────
+  function fmt(isoStr) {
+    if (!isoStr) return '—';
+    const d = new Date(isoStr);
+    return d.toLocaleTimeString([], { hour12: false }) + '.' + String(d.getMilliseconds()).padStart(3,'0');
+  }
+
+  function renderResult(run) {
+    if (run.status === 'running') {
+      return '<span class="result-cell pending">running…</span>';
+    }
+    if (run.status === 'failed' && run.error) {
+      return `<span class="result-cell error">${escHtml(run.error)}</span>`;
+    }
+    if (run.result === undefined || run.result === null) {
+      return '<span class="result-cell pending">—</span>';
+    }
+    // Try to extract a simple value for math tools (array of content objects)
+    let display = run.result;
+    if (Array.isArray(display) && display.length > 0 && display[0].text !== undefined) {
+      display = display[0].text;
+    } else {
+      display = JSON.stringify(run.result);
+    }
+    return `<span class="result-cell">${escHtml(String(display))}</span>`;
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  function renderRuns(runs) {
+    const tbody = document.getElementById('runs-body');
+    if (!runs || runs.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7">
+        <div class="empty-state">
+          <div class="icon">🤖</div>
+          <p>No agent runs yet. Start one above!</p>
+        </div></td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = runs.map(run => `
+      <tr>
+        <td style="font-family:var(--mono);font-size:12px;color:var(--text-muted)">${escHtml(run.id)}</td>
+        <td><span class="tool-chip">${escHtml(run.toolName)}</span></td>
+        <td><span class="args-cell">${escHtml(JSON.stringify(run.args))}</span></td>
+        <td>
+          <span class="badge ${run.status}">
+            <span class="bdot"></span>${run.status}
+          </span>
+        </td>
+        <td class="time-cell">${fmt(run.startedAt)}</td>
+        <td class="time-cell">${fmt(run.stoppedAt)}</td>
+        <td>${renderResult(run)}</td>
+      </tr>
+    `).join('');
+  }
+
+  async function refreshRuns() {
+    try {
+      const res = await fetch('/api/agents');
+      const { runs } = await res.json();
+      renderRuns(runs);
+    } catch { /* ignore network blips */ }
+  }
+
+  refreshRuns();
+  setInterval(refreshRuns, 2000);
+</script>
+
+</body>
+</html>
