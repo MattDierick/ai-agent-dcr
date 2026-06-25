@@ -1,13 +1,16 @@
 /**
  * Dashboard HTTP server for the dcr-mcp-agent.
  *
- * Provides a simple web UI to start agent runs, view history, and see results.
+ * Provides a web UI to manage agents (each with its own DCR client identity)
+ * and run MCP tool calls against any registered agent.
  *
  * Routes:
- *   GET  /              → serves the dashboard HTML page
- *   GET  /api/tools     → discovers available MCP tools (via tools/list)
- *   POST /api/agents    → starts a new agent run { toolName, args }
- *   GET  /api/agents    → returns all run records (in-memory)
+ *   GET  /                  → dashboard HTML
+ *   GET  /api/tools         → discover MCP tools (tools/list, static fallback)
+ *   POST /api/agents/new    → register a new agent (full DCR flow → fresh client_id)
+ *   GET  /api/agents        → list all agent records
+ *   POST /api/runs          → start a run { agentId, toolName, args }
+ *   GET  /api/runs          → list all run records
  */
 
 // Must be imported first: disables TLS verification for ALL HTTPS requests.
@@ -33,10 +36,26 @@ import { logger } from "../util/logger.js";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-export type RunStatus = "running" | "succeeded" | "failed";
+export type AgentStatus = "registering" | "ready" | "failed";
+export type RunStatus   = "running"     | "succeeded" | "failed";
+
+export interface AgentRecord {
+  id: string;
+  /** Human-readable name shown in the UI. */
+  name: string;
+  status: AgentStatus;
+  /** OAuth client_id issued by the AS after DCR (set once ready). */
+  clientId?: string;
+  createdAt: string;
+  /** Path to the per-agent credentials cache file. */
+  credentialsPath: string;
+  error?: string;
+}
 
 export interface RunRecord {
   id: string;
+  agentId: string;
+  agentName: string;
   toolName: string;
   args: Record<string, unknown>;
   status: RunStatus;
@@ -46,14 +65,15 @@ export interface RunRecord {
   error?: string;
 }
 
-// ── In-memory store ──────────────────────────────────────────────────────────
+// ── In-memory stores ─────────────────────────────────────────────────────────
 
+const agents: AgentRecord[] = [];
 const runs: RunRecord[] = [];
-let runCounter = 0;
+let agentCounter = 0;
+let runCounter   = 0;
 
-function newRunId(): string {
-  return `run-${String(++runCounter).padStart(4, "0")}`;
-}
+function newAgentId(): string { return `agent-${String(++agentCounter).padStart(4, "0")}`; }
+function newRunId():   string { return `run-${String(++runCounter).padStart(4, "0")}`; }
 
 // ── Config ───────────────────────────────────────────────────────────────────
 
@@ -81,8 +101,8 @@ function serveStatic(res: http.ServerResponse, filePath: string): void {
     const ext = path.extname(filePath);
     const mime: Record<string, string> = {
       ".html": "text/html; charset=utf-8",
-      ".css": "text/css",
-      ".js": "application/javascript",
+      ".css":  "text/css",
+      ".js":   "application/javascript",
     };
     res.writeHead(200, { "Content-Type": mime[ext] ?? "text/plain" });
     res.end(content);
@@ -95,12 +115,11 @@ function serveStatic(res: http.ServerResponse, filePath: string): void {
 // ── JSON helpers ─────────────────────────────────────────────────────────────
 
 function jsonResponse(res: http.ServerResponse, status: number, body: unknown): void {
-  const json = JSON.stringify(body);
   res.writeHead(status, {
     "Content-Type": "application/json",
     "Access-Control-Allow-Origin": "*",
   });
-  res.end(json);
+  res.end(JSON.stringify(body));
 }
 
 function readBody(req: http.IncomingMessage): Promise<string> {
@@ -118,8 +137,7 @@ const FALLBACK_TOOLS = ["add", "subtract", "multiply", "divide"];
 
 async function discoverMcpTools(): Promise<string[]> {
   try {
-    // We need a token first to talk to the MCP server
-    const metadata = await discoverMetadata(baseConfig);
+    const metadata   = await discoverMetadata(baseConfig);
     const authMethod = selectAuthMethod(metadata.tokenEndpointAuthMethodsSupported);
 
     let creds = await loadCredentials(baseConfig.clientCredentialsPath);
@@ -151,40 +169,111 @@ async function discoverMcpTools(): Promise<string[]> {
   }
 }
 
-// ── Agent runner ─────────────────────────────────────────────────────────────
+// ── Agent management ─────────────────────────────────────────────────────────
 
-async function startAgentRun(
+/**
+ * Register a brand-new DCR client and create an agent record.
+ * The registration runs asynchronously; the caller gets an immediate response
+ * with status "registering", then the record updates to "ready" or "failed".
+ */
+async function createAgent(name: string): Promise<AgentRecord> {
+  const id = newAgentId();
+  const credentialsPath = `.dcr-credentials-${id}.json`;
+
+  const record: AgentRecord = {
+    id,
+    name: name || id,
+    status: "registering",
+    createdAt: new Date().toISOString(),
+    credentialsPath,
+  };
+  agents.unshift(record); // newest first
+
+  // Run DCR asynchronously so the HTTP response returns immediately.
+  (async () => {
+    logger.info("Dashboard: starting DCR for new agent", { id, name: record.name });
+    try {
+      const metadata = await discoverMetadata(baseConfig);
+      // Always perform a fresh registration — ignore any cached file for this path.
+      const creds = await registerClient(
+        metadata.registrationEndpoint,
+        metadata.tokenEndpoint,
+        { ...baseConfig, clientCredentialsPath: credentialsPath },
+      );
+      await saveCredentials(credentialsPath, creds);
+
+      record.status   = "ready";
+      record.clientId = creds.clientId;
+      logger.info("Dashboard: agent registered successfully", {
+        id,
+        clientId: creds.clientId,
+      });
+    } catch (err) {
+      record.status = "failed";
+      record.error  = (err as Error).message ?? String(err);
+      logger.error("Dashboard: agent DCR failed", { id, error: record.error });
+    }
+  })();
+
+  return record;
+}
+
+// ── Run management ────────────────────────────────────────────────────────────
+
+async function startRun(
+  agentId: string,
   toolName: string,
   args: Record<string, unknown>,
 ): Promise<RunRecord> {
+  const agentRecord = agents.find((a) => a.id === agentId);
+  if (!agentRecord) throw new Error(`Agent ${agentId} not found`);
+  if (agentRecord.status !== "ready") {
+    throw new Error(`Agent ${agentId} is not ready (status: ${agentRecord.status})`);
+  }
+
   const record: RunRecord = {
     id: newRunId(),
+    agentId,
+    agentName: agentRecord.name,
     toolName,
     args,
     status: "running",
     startedAt: new Date().toISOString(),
   };
-  runs.unshift(record); // newest first
+  runs.unshift(record);
 
-  // Run asynchronously — don't await here, the HTTP response returns immediately
   (async () => {
-    logger.info("Dashboard: starting agent run", { id: record.id, toolName, args });
+    logger.info("Dashboard: starting run", {
+      id: record.id,
+      agentId,
+      toolName,
+      args,
+    });
     try {
-      const config = { ...baseConfig, mcpToolName: toolName, mcpToolArgs: args };
-      const agent = new Agent(config);
+      // Give this agent its own credentials path so it uses its DCR identity.
+      const config = {
+        ...baseConfig,
+        mcpToolName: toolName,
+        mcpToolArgs: args,
+        clientCredentialsPath: agentRecord.credentialsPath,
+      };
+      const agent  = new Agent(config);
       const result = await agent.runTask();
 
       record.status = result.isError ? "failed" : "succeeded";
       record.result = result.result;
       if (result.isError) {
-        record.error = typeof result.result === "string" ? result.result : JSON.stringify(result.result);
+        record.error =
+          typeof result.result === "string"
+            ? result.result
+            : JSON.stringify(result.result);
       }
     } catch (err) {
       record.status = "failed";
-      record.error = (err as Error).message ?? String(err);
+      record.error  = (err as Error).message ?? String(err);
     } finally {
       record.stoppedAt = new Date().toISOString();
-      logger.info("Dashboard: agent run completed", {
+      logger.info("Dashboard: run completed", {
         id: record.id,
         status: record.status,
       });
@@ -198,24 +287,22 @@ async function startAgentRun(
 
 const server = http.createServer(async (req, res) => {
   const method = req.method ?? "GET";
-  const url = req.url ?? "/";
+  const url    = req.url   ?? "/";
 
   // CORS preflight
   if (method === "OPTIONS") {
-    res.writeHead(204, { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET,POST,OPTIONS", "Access-Control-Allow-Headers": "Content-Type" });
+    res.writeHead(204, {
+      "Access-Control-Allow-Origin":  "*",
+      "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    });
     res.end();
     return;
   }
 
-  // ── GET / → serve dashboard HTML
+  // ── GET / → dashboard HTML
   if (method === "GET" && (url === "/" || url === "/index.html")) {
     serveStatic(res, path.join(PUBLIC_DIR, "index.html"));
-    return;
-  }
-
-  // ── Static assets (css, js if needed)
-  if (method === "GET" && url.startsWith("/public/")) {
-    serveStatic(res, path.join(PUBLIC_DIR, url.replace("/public/", "")));
     return;
   }
 
@@ -226,14 +313,30 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // ── GET /api/agents
-  if (method === "GET" && url === "/api/agents") {
-    jsonResponse(res, 200, { runs });
+  // ── POST /api/agents/new → register a new agent (DCR)
+  if (method === "POST" && url === "/api/agents/new") {
+    let name = "";
+    try {
+      const raw = await readBody(req);
+      if (raw.trim()) {
+        const body = JSON.parse(raw) as { name?: string };
+        name = body.name?.trim() ?? "";
+      }
+    } catch { /* ignore parse errors — name is optional */ }
+
+    const record = await createAgent(name);
+    jsonResponse(res, 202, record);
     return;
   }
 
-  // ── POST /api/agents
-  if (method === "POST" && url === "/api/agents") {
+  // ── GET /api/agents → list agents
+  if (method === "GET" && url === "/api/agents") {
+    jsonResponse(res, 200, { agents });
+    return;
+  }
+
+  // ── POST /api/runs → start a run for an agent
+  if (method === "POST" && url === "/api/runs") {
     let body: unknown;
     try {
       const raw = await readBody(req);
@@ -243,15 +346,37 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    const { toolName, args } = body as { toolName?: string; args?: Record<string, unknown> };
+    const { agentId, toolName, args } = body as {
+      agentId?: string;
+      toolName?: string;
+      args?: Record<string, unknown>;
+    };
+
+    if (!agentId || typeof agentId !== "string") {
+      jsonResponse(res, 400, { error: "agentId (string) is required" });
+      return;
+    }
     if (!toolName || typeof toolName !== "string") {
       jsonResponse(res, 400, { error: "toolName (string) is required" });
       return;
     }
-    const toolArgs: Record<string, unknown> = args && typeof args === "object" ? args : {};
 
-    const record = await startAgentRun(toolName, toolArgs);
-    jsonResponse(res, 202, record);
+    try {
+      const record = await startRun(
+        agentId,
+        toolName,
+        args && typeof args === "object" ? args : {},
+      );
+      jsonResponse(res, 202, record);
+    } catch (err) {
+      jsonResponse(res, 400, { error: (err as Error).message });
+    }
+    return;
+  }
+
+  // ── GET /api/runs → list runs
+  if (method === "GET" && url === "/api/runs") {
+    jsonResponse(res, 200, { runs });
     return;
   }
 

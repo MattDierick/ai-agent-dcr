@@ -90,6 +90,85 @@ export MCP_SERVER_URL="https://your-mcp.example.com/mcp"
 npm start
 ```
 
+## Web Dashboard
+
+The dashboard is a local web UI that lets you start agent runs, select an MCP
+tool, enter arguments, and watch results update in real time — without touching
+the CLI.
+
+### 1 — Configure your environment
+
+Copy `.env.example` to `.env` and fill in the required values:
+
+```bash
+cp .env.example .env
+```
+
+At minimum set:
+
+```
+OAUTH_AS_ISSUER=https://your-auth-server.example.com
+MCP_SERVER_URL=https://your-mcp-server.example.com/mcp
+DCR_CLIENT_ID=your-iat-client-id
+DCR_CLIENT_SECRET=your-iat-client-secret
+```
+
+> Optional: set `DASHBOARD_PORT=8080` (default `3000`) to change the listening port.
+
+### 2 — Start the dashboard
+
+```bash
+# Node 20+ built-in env-file loader (recommended)
+node --env-file=.env --import tsx src/dashboard/server.ts
+
+# Or: export the env manually, then use the npm script
+export $(grep -v '^#' .env | xargs) && npm run dashboard
+```
+
+### 3 — Open the browser
+
+```
+http://localhost:3000
+```
+
+### What the dashboard provides
+
+| Feature | Detail |
+|---------|--------|
+| **🤖 Agents panel** | Create agents with **＋ New Agent** — each gets its own DCR registration (`client_id`) from the AS |
+| **Agent status** | 🟣 registering → 🟢 ready / 🔴 failed, with the issued `client_id` displayed |
+| **🚀 Start Agent Run** | Pick an agent (from the ready list), a tool, arguments, then click **▶ Start** |
+| **Tool dropdown** | Populated automatically via `tools/list` (static fallback: add/subtract/multiply/divide) |
+| **Argument inputs** | Numeric `a` / `b` fields plus an optional raw-JSON extra-args field |
+| **📋 Runs table** | Shows run ID, which agent executed it, tool, args, status badge (🟡 running → 🟢 succeeded / 🔴 failed), timestamps, and the MCP result |
+| **Auto-refresh** | Agents and runs tables both poll every 2 seconds — no manual reload needed |
+
+Each new agent performs a full two-step DCR (IAT → register) and caches its
+credentials in `.dcr-credentials-<agentId>.json` (0600, already git-ignored).
+
+### Dashboard API (for scripting)
+
+```bash
+# List available MCP tools
+curl http://localhost:3000/api/tools
+
+# Create a new agent (triggers DCR registration)
+curl -X POST http://localhost:3000/api/agents/new \
+  -H "Content-Type: application/json" \
+  -d '{"name":"my-agent"}'
+
+# List all agents
+curl http://localhost:3000/api/agents
+
+# Start a run for a specific agent
+curl -X POST http://localhost:3000/api/runs \
+  -H "Content-Type: application/json" \
+  -d '{"agentId":"agent-0001","toolName":"add","args":{"a":9,"b":7}}'
+
+# List all runs
+curl http://localhost:3000/api/runs
+```
+
 
 ## Development
 

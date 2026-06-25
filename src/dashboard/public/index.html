@@ -8,19 +8,20 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #0f1117;
-      --surface: #1a1d27;
-      --surface2: #22263a;
-      --border: #2e3350;
-      --accent: #4f8ef7;
+      --bg:           #0f1117;
+      --surface:      #1a1d27;
+      --surface2:     #22263a;
+      --border:       #2e3350;
+      --accent:       #4f8ef7;
       --accent-hover: #6fa3ff;
-      --success: #34d399;
-      --error: #f87171;
-      --warn: #fbbf24;
-      --text: #e2e8f0;
-      --text-muted: #8892a4;
-      --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      --mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+      --success:      #34d399;
+      --error:        #f87171;
+      --warn:         #fbbf24;
+      --info:         #818cf8;
+      --text:         #e2e8f0;
+      --text-muted:   #8892a4;
+      --font:  'Segoe UI', system-ui, -apple-system, sans-serif;
+      --mono:  'Cascadia Code', 'Fira Code', 'Consolas', monospace;
       --radius: 8px;
     }
 
@@ -43,17 +44,9 @@
       align-items: center;
       gap: 12px;
     }
-    header .logo {
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--accent);
-      letter-spacing: -0.5px;
-    }
-    header .subtitle {
-      color: var(--text-muted);
-      font-size: 13px;
-    }
-    header .pill {
+    .logo     { font-size: 20px; font-weight: 700; color: var(--accent); letter-spacing: -0.5px; }
+    .subtitle { color: var(--text-muted); font-size: 13px; }
+    .pill {
       margin-left: auto;
       background: var(--surface2);
       border: 1px solid var(--border);
@@ -62,15 +55,15 @@
       font-size: 12px;
       color: var(--text-muted);
     }
-    header .pill span { color: var(--success); font-weight: 600; }
+    .pill span { color: var(--success); font-weight: 600; }
 
     /* ── Layout ──────────────────────────────────── */
     main {
-      max-width: 1100px;
+      max-width: 1200px;
       margin: 0 auto;
       padding: 28px 24px;
-      display: grid;
-      grid-template-rows: auto 1fr;
+      display: flex;
+      flex-direction: column;
       gap: 24px;
     }
 
@@ -81,18 +74,46 @@
       border-radius: var(--radius);
       padding: 20px 24px;
     }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
     .card-title {
       font-size: 15px;
       font-weight: 600;
       color: var(--text);
-      margin-bottom: 16px;
       display: flex;
       align-items: center;
       gap: 8px;
     }
-    .card-title .icon { font-size: 16px; }
 
-    /* ── Start Agent form ────────────────────────── */
+    /* ── Buttons ─────────────────────────────────── */
+    .btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .btn:hover:not(:disabled)  { background: var(--accent-hover); }
+    .btn:active:not(:disabled) { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-sm { padding: 5px 12px; font-size: 12px; }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+    .btn-outline:hover:not(:disabled) { background: var(--surface2); color: var(--text); border-color: var(--accent); }
+
+    /* ── Form controls ───────────────────────────── */
     .form-row {
       display: flex;
       gap: 12px;
@@ -102,11 +123,11 @@
     .form-group {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 5px;
     }
-    .form-group label {
-      font-size: 12px;
-      font-weight: 500;
+    label {
+      font-size: 11px;
+      font-weight: 600;
       color: var(--text-muted);
       text-transform: uppercase;
       letter-spacing: 0.5px;
@@ -122,72 +143,37 @@
       outline: none;
       transition: border-color 0.15s;
     }
-    select:focus, input:focus, textarea:focus {
-      border-color: var(--accent);
-    }
-    select { cursor: pointer; min-width: 160px; }
+    select:focus, input:focus, textarea:focus { border-color: var(--accent); }
+    select { cursor: pointer; min-width: 180px; }
     input[type="number"] { width: 100px; }
+    input[type="text"]   { min-width: 160px; }
     textarea {
-      width: 280px;
+      width: 240px;
       height: 38px;
       resize: vertical;
       font-family: var(--mono);
       font-size: 12px;
     }
 
-    .btn {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      padding: 9px 20px;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s, transform 0.1s;
-      white-space: nowrap;
-    }
-    .btn:hover:not(:disabled) { background: var(--accent-hover); }
-    .btn:active:not(:disabled) { transform: scale(0.97); }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    .loading-indicator {
-      color: var(--text-muted);
+    .status-msg {
       font-size: 12px;
-      margin-top: 6px;
+      color: var(--text-muted);
+      margin-top: 8px;
       min-height: 18px;
     }
-    .loading-indicator.active { color: var(--warn); }
+    .status-msg.warn   { color: var(--warn); }
+    .status-msg.error  { color: var(--error); }
+    .status-msg.ok     { color: var(--success); }
 
-    /* ── Runs table ──────────────────────────────── */
-    .table-header {
+    /* ── New Agent inline form ────────────────────── */
+    .new-agent-form {
       display: flex;
+      gap: 10px;
       align-items: center;
-      justify-content: space-between;
-      margin-bottom: 14px;
-    }
-    .refresh-badge {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-    .dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--success);
-      animation: pulse 1.5s infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
     }
 
-    .runs-table-wrap {
-      overflow-x: auto;
-    }
+    /* ── Tables ──────────────────────────────────── */
+    .table-wrap { overflow-x: auto; }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -203,18 +189,12 @@
       letter-spacing: 0.5px;
       border-bottom: 1px solid var(--border);
     }
-    tbody tr {
-      border-bottom: 1px solid var(--border);
-      transition: background 0.1s;
-    }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
     tbody tr:last-child { border-bottom: none; }
     tbody tr:hover { background: var(--surface2); }
-    tbody td {
-      padding: 10px 12px;
-      vertical-align: top;
-    }
+    tbody td { padding: 10px 12px; vertical-align: middle; }
 
-    /* ── Status badges ────────────────────────────── */
+    /* ── Status badges ───────────────────────────── */
     .badge {
       display: inline-flex;
       align-items: center;
@@ -225,60 +205,68 @@
       font-weight: 600;
       white-space: nowrap;
     }
-    .badge.running  { background: rgba(251,191,36,0.15); color: var(--warn); }
-    .badge.succeeded { background: rgba(52,211,153,0.15); color: var(--success); }
-    .badge.failed   { background: rgba(248,113,113,0.15); color: var(--error); }
-    .badge .bdot {
-      width: 6px; height: 6px; border-radius: 50%;
-    }
-    .badge.running .bdot  { background: var(--warn); animation: pulse 1s infinite; }
-    .badge.succeeded .bdot { background: var(--success); }
-    .badge.failed .bdot   { background: var(--error); }
+    .badge.registering { background: rgba(129,140,248,0.15); color: var(--info); }
+    .badge.ready       { background: rgba(52,211,153,0.15);  color: var(--success); }
+    .badge.running     { background: rgba(251,191,36,0.15);  color: var(--warn); }
+    .badge.succeeded   { background: rgba(52,211,153,0.15);  color: var(--success); }
+    .badge.failed      { background: rgba(248,113,113,0.15); color: var(--error); }
+    .bdot { width: 6px; height: 6px; border-radius: 50%; }
+    .badge.registering .bdot { background: var(--info);    animation: pulse 1s infinite; }
+    .badge.ready       .bdot { background: var(--success); }
+    .badge.running     .bdot { background: var(--warn);    animation: pulse 1s infinite; }
+    .badge.succeeded   .bdot { background: var(--success); }
+    .badge.failed      .bdot { background: var(--error); }
 
-    /* ── Result cell ─────────────────────────────── */
-    .result-cell {
-      font-family: var(--mono);
-      font-size: 12px;
-      max-width: 320px;
-      word-break: break-all;
-    }
-    .result-cell.error { color: var(--error); }
-    .result-cell.pending { color: var(--text-muted); font-style: italic; font-family: var(--font); }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
-    .args-cell {
-      font-family: var(--mono);
-      font-size: 12px;
-      color: var(--text-muted);
-    }
-
-    .time-cell {
-      color: var(--text-muted);
-      font-size: 12px;
-      white-space: nowrap;
-    }
-
-    /* ── Empty state ─────────────────────────────── */
-    .empty-state {
-      text-align: center;
-      padding: 48px 24px;
-      color: var(--text-muted);
-    }
-    .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
-    .empty-state p { font-size: 14px; }
-
-    /* ── Tool name chip ───────────────────────────── */
-    .tool-chip {
+    /* ── Chips / mono cells ──────────────────────── */
+    .chip {
       display: inline-block;
       background: var(--surface2);
       border: 1px solid var(--border);
       border-radius: 4px;
       padding: 1px 7px;
       font-family: var(--mono);
-      font-size: 12px;
+      font-size: 11px;
       color: var(--accent);
     }
+    .mono { font-family: var(--mono); font-size: 12px; color: var(--text-muted); }
+    .time-cell { color: var(--text-muted); font-size: 12px; white-space: nowrap; }
 
-    /* ── Scrollbar ────────────────────────────────── */
+    /* ── Result cell ─────────────────────────────── */
+    .result-cell {
+      font-family: var(--mono);
+      font-size: 12px;
+      max-width: 300px;
+      word-break: break-all;
+    }
+    .result-cell.error   { color: var(--error); }
+    .result-cell.pending { color: var(--text-muted); font-style: italic; font-family: var(--font); }
+
+    /* ── Refresh badge ───────────────────────────── */
+    .refresh-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 1.5s infinite;
+    }
+
+    /* ── Empty state ─────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 36px 24px;
+      color: var(--text-muted);
+    }
+    .empty-state .icon { font-size: 36px; margin-bottom: 10px; }
+    .empty-state p { font-size: 13px; }
+
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
@@ -294,21 +282,63 @@
 
 <main>
 
-  <!-- ── Start Agent ── -->
+  <!-- ── 1. Agents ────────────────────────────── -->
   <div class="card">
-    <div class="card-title"><span class="icon">🚀</span> Start Agent</div>
+    <div class="card-header">
+      <div class="card-title">🤖 Agents</div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <div class="new-agent-form">
+          <input type="text" id="agent-name" placeholder="Agent name (optional)" />
+          <button class="btn btn-sm" id="new-agent-btn">＋ New Agent</button>
+        </div>
+        <div class="refresh-badge"><div class="dot"></div> Auto-refresh</div>
+      </div>
+    </div>
+    <div id="new-agent-status" class="status-msg"></div>
+    <div class="table-wrap" style="margin-top:12px">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Status</th>
+            <th>Client ID (DCR identity)</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody id="agents-body">
+          <tr><td colspan="5">
+            <div class="empty-state">
+              <div class="icon">🤖</div>
+              <p>No agents yet. Create one with <strong>＋ New Agent</strong>.</p>
+            </div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── 2. Start a Run ───────────────────────── -->
+  <div class="card">
+    <div class="card-title" style="margin-bottom:16px">🚀 Start Agent Run</div>
     <div class="form-row">
+      <div class="form-group">
+        <label>Agent</label>
+        <select id="run-agent-select">
+          <option value="">— select an agent —</option>
+        </select>
+      </div>
       <div class="form-group">
         <label>MCP Tool</label>
         <select id="tool-select">
           <option value="">Loading tools…</option>
         </select>
       </div>
-      <div class="form-group" id="arg-a-group">
+      <div class="form-group">
         <label>a</label>
         <input type="number" id="arg-a" value="9" />
       </div>
-      <div class="form-group" id="arg-b-group">
+      <div class="form-group">
         <label>b</label>
         <input type="number" id="arg-b" value="7" />
       </div>
@@ -321,20 +351,21 @@
         <button class="btn" id="start-btn" disabled>▶ Start</button>
       </div>
     </div>
-    <div class="loading-indicator" id="start-status"></div>
+    <div id="start-status" class="status-msg"></div>
   </div>
 
-  <!-- ── Runs ── -->
+  <!-- ── 3. Runs ──────────────────────────────── -->
   <div class="card">
-    <div class="table-header">
-      <div class="card-title" style="margin-bottom:0"><span class="icon">📋</span> Agent Runs</div>
+    <div class="card-header">
+      <div class="card-title">📋 Runs</div>
       <div class="refresh-badge"><div class="dot"></div> Auto-refresh</div>
     </div>
-    <div class="runs-table-wrap">
-      <table id="runs-table">
+    <div class="table-wrap">
+      <table>
         <thead>
           <tr>
-            <th>ID</th>
+            <th>Run ID</th>
+            <th>Agent</th>
             <th>Tool</th>
             <th>Args</th>
             <th>Status</th>
@@ -344,14 +375,12 @@
           </tr>
         </thead>
         <tbody id="runs-body">
-          <tr>
-            <td colspan="7">
-              <div class="empty-state">
-                <div class="icon">🤖</div>
-                <p>No agent runs yet. Start one above!</p>
-              </div>
-            </td>
-          </tr>
+          <tr><td colspan="8">
+            <div class="empty-state">
+              <div class="icon">📭</div>
+              <p>No runs yet. Create an agent and start one above.</p>
+            </div>
+          </td></tr>
         </tbody>
       </table>
     </div>
@@ -360,41 +389,110 @@
 </main>
 
 <script>
-  // ── Tool loading ──────────────────────────────────────────────────────────
-  const toolSelect = document.getElementById('tool-select');
-  const startBtn   = document.getElementById('start-btn');
-  const startStatus = document.getElementById('start-status');
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function esc(str) {
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function fmt(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleTimeString([], {hour12: false}) + '.' + String(d.getMilliseconds()).padStart(3,'0');
+  }
+
+  function badge(status) {
+    return `<span class="badge ${status}"><span class="bdot"></span>${status}</span>`;
+  }
+
+  // ── Tool discovery ─────────────────────────────────────────────────────────
+  const toolSelect   = document.getElementById('tool-select');
+  const startBtn     = document.getElementById('start-btn');
+  const startStatus  = document.getElementById('start-status');
 
   async function loadTools() {
     try {
-      const res = await fetch('/api/tools');
-      const { tools } = await res.json();
-      toolSelect.innerHTML = '';
-      tools.forEach(t => {
-        const opt = document.createElement('option');
-        opt.value = t;
-        opt.textContent = t;
-        toolSelect.appendChild(opt);
-      });
-      startBtn.disabled = false;
-      startStatus.textContent = `${tools.length} tool${tools.length !== 1 ? 's' : ''} discovered`;
-      startStatus.classList.remove('active');
-      setTimeout(() => { startStatus.textContent = ''; }, 3000);
-    } catch (e) {
+      const { tools } = await fetch('/api/tools').then(r => r.json());
+      toolSelect.innerHTML = tools.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+      updateStartBtn();
+      showStatus(startStatus, `${tools.length} tool${tools.length!==1?'s':''} discovered`, 'ok', 3000);
+    } catch {
       toolSelect.innerHTML = '<option value="add">add</option><option value="multiply">multiply</option><option value="divide">divide</option>';
-      startBtn.disabled = false;
-      startStatus.textContent = 'Tool discovery failed — using fallback list';
+      showStatus(startStatus, 'Tool discovery failed — using fallback list', 'warn');
+      updateStartBtn();
     }
   }
 
-  loadTools();
+  // ── Status helper ──────────────────────────────────────────────────────────
+  function showStatus(el, msg, cls = '', ms = 0) {
+    el.textContent = msg;
+    el.className = 'status-msg' + (cls ? ' ' + cls : '');
+    if (ms) setTimeout(() => { el.textContent = ''; el.className = 'status-msg'; }, ms);
+  }
 
-  // ── Start agent ────────────────────────────────────────────────────────────
+  // ── Agents ─────────────────────────────────────────────────────────────────
+  const agentNameInput   = document.getElementById('agent-name');
+  const newAgentBtn      = document.getElementById('new-agent-btn');
+  const newAgentStatus   = document.getElementById('new-agent-status');
+  const agentsBody       = document.getElementById('agents-body');
+  const runAgentSelect   = document.getElementById('run-agent-select');
+
+  newAgentBtn.addEventListener('click', async () => {
+    const name = agentNameInput.value.trim();
+    newAgentBtn.disabled = true;
+    showStatus(newAgentStatus, 'Registering new agent (DCR)…', 'warn');
+    try {
+      const rec = await fetch('/api/agents/new', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ name }),
+      }).then(r => r.json());
+      agentNameInput.value = '';
+      showStatus(newAgentStatus, `✓ Agent ${rec.id} (${rec.name}) created — DCR in progress…`, 'ok');
+    } catch (e) {
+      showStatus(newAgentStatus, `✗ Failed: ${e.message}`, 'error');
+    } finally {
+      newAgentBtn.disabled = false;
+    }
+  });
+
+  function renderAgents(agents) {
+    if (!agents || agents.length === 0) {
+      agentsBody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="icon">🤖</div><p>No agents yet. Create one with <strong>＋ New Agent</strong>.</p></div></td></tr>`;
+      return;
+    }
+
+    agentsBody.innerHTML = agents.map(a => `
+      <tr>
+        <td class="mono">${esc(a.id)}</td>
+        <td style="font-weight:500">${esc(a.name)}</td>
+        <td>${badge(a.status)}${a.error ? ` <span style="color:var(--error);font-size:11px">${esc(a.error)}</span>` : ''}</td>
+        <td>${a.clientId ? `<span class="chip">${esc(a.clientId)}</span>` : '<span style="color:var(--text-muted);font-size:12px">—</span>'}</td>
+        <td class="time-cell">${fmt(a.createdAt)}</td>
+      </tr>
+    `).join('');
+
+    // Rebuild the agent selector: only ready agents
+    const ready = agents.filter(a => a.status === 'ready');
+    const current = runAgentSelect.value;
+    runAgentSelect.innerHTML = '<option value="">— select an agent —</option>' +
+      ready.map(a => `<option value="${esc(a.id)}"${a.id===current?' selected':''}>${esc(a.name)} (${esc(a.id)})</option>`).join('');
+    updateStartBtn();
+  }
+
+  // ── Start run ──────────────────────────────────────────────────────────────
+  function updateStartBtn() {
+    startBtn.disabled = !runAgentSelect.value || !toolSelect.value;
+  }
+  runAgentSelect.addEventListener('change', updateStartBtn);
+  toolSelect.addEventListener('change', updateStartBtn);
+
   startBtn.addEventListener('click', async () => {
+    const agentId  = runAgentSelect.value;
     const toolName = toolSelect.value;
-    if (!toolName) return;
+    if (!agentId || !toolName) return;
 
-    // Build args
     const args = {};
     const aVal = document.getElementById('arg-a').value.trim();
     const bVal = document.getElementById('arg-b').value.trim();
@@ -403,110 +501,79 @@
 
     const extraRaw = document.getElementById('arg-extra').value.trim();
     if (extraRaw) {
-      try {
-        const extra = JSON.parse(extraRaw);
-        Object.assign(args, extra);
-      } catch {
-        startStatus.textContent = '⚠ Extra args must be valid JSON';
-        startStatus.classList.add('active');
-        return;
-      }
+      try { Object.assign(args, JSON.parse(extraRaw)); }
+      catch { showStatus(startStatus, '⚠ Extra args must be valid JSON', 'warn'); return; }
     }
 
     startBtn.disabled = true;
-    startStatus.textContent = `Starting ${toolName}…`;
-    startStatus.classList.add('active');
+    showStatus(startStatus, `Starting ${toolName} on ${agentId}…`, 'warn');
 
     try {
-      const res = await fetch('/api/agents', {
+      const rec = await fetch('/api/runs', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ toolName, args }),
-      });
-      const record = await res.json();
-      startStatus.textContent = `✓ Run ${record.id} started`;
-      startStatus.classList.remove('active');
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ agentId, toolName, args }),
+      }).then(r => r.json());
+
+      if (rec.error) throw new Error(rec.error);
+      showStatus(startStatus, `✓ Run ${rec.id} started`, 'ok', 3000);
     } catch (e) {
-      startStatus.textContent = `✗ Failed to start: ${e.message}`;
+      showStatus(startStatus, `✗ Failed: ${e.message}`, 'error');
     } finally {
-      startBtn.disabled = false;
+      startBtn.disabled = !runAgentSelect.value || !toolSelect.value;
     }
   });
 
   // ── Runs table ─────────────────────────────────────────────────────────────
-  function fmt(isoStr) {
-    if (!isoStr) return '—';
-    const d = new Date(isoStr);
-    return d.toLocaleTimeString([], { hour12: false }) + '.' + String(d.getMilliseconds()).padStart(3,'0');
-  }
-
   function renderResult(run) {
-    if (run.status === 'running') {
-      return '<span class="result-cell pending">running…</span>';
-    }
-    if (run.status === 'failed' && run.error) {
-      return `<span class="result-cell error">${escHtml(run.error)}</span>`;
-    }
-    if (run.result === undefined || run.result === null) {
-      return '<span class="result-cell pending">—</span>';
-    }
-    // Try to extract a simple value for math tools (array of content objects)
+    if (run.status === 'running') return '<span class="result-cell pending">running…</span>';
+    if (run.status === 'failed' && run.error) return `<span class="result-cell error">${esc(run.error)}</span>`;
+    if (run.result == null) return '<span class="result-cell pending">—</span>';
     let display = run.result;
     if (Array.isArray(display) && display.length > 0 && display[0].text !== undefined) {
       display = display[0].text;
     } else {
       display = JSON.stringify(run.result);
     }
-    return `<span class="result-cell">${escHtml(String(display))}</span>`;
-  }
-
-  function escHtml(str) {
-    return String(str)
-      .replace(/&/g,'&amp;')
-      .replace(/</g,'&lt;')
-      .replace(/>/g,'&gt;')
-      .replace(/"/g,'&quot;');
+    return `<span class="result-cell">${esc(String(display))}</span>`;
   }
 
   function renderRuns(runs) {
     const tbody = document.getElementById('runs-body');
     if (!runs || runs.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7">
-        <div class="empty-state">
-          <div class="icon">🤖</div>
-          <p>No agent runs yet. Start one above!</p>
-        </div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="icon">📭</div><p>No runs yet. Create an agent and start one above.</p></div></td></tr>`;
       return;
     }
-
-    tbody.innerHTML = runs.map(run => `
+    tbody.innerHTML = runs.map(r => `
       <tr>
-        <td style="font-family:var(--mono);font-size:12px;color:var(--text-muted)">${escHtml(run.id)}</td>
-        <td><span class="tool-chip">${escHtml(run.toolName)}</span></td>
-        <td><span class="args-cell">${escHtml(JSON.stringify(run.args))}</span></td>
-        <td>
-          <span class="badge ${run.status}">
-            <span class="bdot"></span>${run.status}
-          </span>
-        </td>
-        <td class="time-cell">${fmt(run.startedAt)}</td>
-        <td class="time-cell">${fmt(run.stoppedAt)}</td>
-        <td>${renderResult(run)}</td>
+        <td class="mono">${esc(r.id)}</td>
+        <td><span style="font-size:12px">${esc(r.agentName)}<br><span class="mono" style="font-size:11px">${esc(r.agentId)}</span></span></td>
+        <td><span class="chip">${esc(r.toolName)}</span></td>
+        <td class="mono">${esc(JSON.stringify(r.args))}</td>
+        <td>${badge(r.status)}</td>
+        <td class="time-cell">${fmt(r.startedAt)}</td>
+        <td class="time-cell">${fmt(r.stoppedAt)}</td>
+        <td>${renderResult(r)}</td>
       </tr>
     `).join('');
   }
 
-  async function refreshRuns() {
+  // ── Polling ────────────────────────────────────────────────────────────────
+  async function refresh() {
     try {
-      const res = await fetch('/api/agents');
-      const { runs } = await res.json();
+      const [{ agents }, { runs }] = await Promise.all([
+        fetch('/api/agents').then(r => r.json()),
+        fetch('/api/runs').then(r => r.json()),
+      ]);
+      renderAgents(agents);
       renderRuns(runs);
-    } catch { /* ignore network blips */ }
+    } catch { /* ignore blips */ }
   }
 
-  refreshRuns();
-  setInterval(refreshRuns, 2000);
+  // Initial load
+  loadTools();
+  refresh();
+  setInterval(refresh, 2000);
 </script>
-
 </body>
 </html>
